@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "eterna-trading": {
+      "type": "streamable-http",
+      "url": "https://mcp.eterna.exchange/mcp",
+      "headers": {
+        "Authorization": "Bearer eterna_mcp_your_key_here"
+      }
+    }
+  }
+}
