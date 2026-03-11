@@ -1,35 +1,67 @@
 """CrewAI trading crew with Eterna MCP tools.
 
-Creates a crew of specialized trading agents that collaborate using
-the Eterna MCP Gateway for market analysis and trade execution.
+Demonstrates the full flow:
+1. Connect without authentication
+2. Register and receive an API key via MCP
+3. Reconnect with the key
+4. Run a multi-agent crew (analyst + risk manager)
 
 Prerequisites:
     pip install crewai crewai-tools[mcp]
 
 Usage:
     export ANTHROPIC_API_KEY=sk-ant-...
-    export ETERNA_API_KEY=eterna_mcp_your_key_here
     python crewai_trading_crew.py
 """
 
-import os
+import json
+
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 
 from crewai import Agent, Crew, Task
 from crewai_tools.mcp import MCPServerAdapter
 
+MCP_URL = "https://mcp.eterna.exchange/mcp"
 
-def main():
-    eterna_key = os.environ["ETERNA_API_KEY"]
 
-    # Connect to Eterna MCP Gateway
+async def register_agent() -> str:
+    """Connect without auth, call register_agent directly, return the API key."""
+    import asyncio
+
+    async with streamablehttp_client(MCP_URL) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool(
+                "register_agent", {"name": "my-crewai-crew"}
+            )
+            # Parse the API key from the response
+            for content in result.content:
+                text = content.text if hasattr(content, "text") else str(content)
+                if "eterna_mcp_" in text:
+                    for word in text.split():
+                        if word.startswith("eterna_mcp_"):
+                            return word.strip(".,;:\"'`")
+                    # Try parsing as JSON
+                    try:
+                        data = json.loads(text)
+                        if isinstance(data, dict) and "apiKey" in data:
+                            return data["apiKey"]
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+    raise RuntimeError("Failed to extract API key from registration response")
+
+
+def trade(api_key: str):
+    """Connect with the API key and run a trading crew."""
     server = MCPServerAdapter(
-        server_url="https://mcp.eterna.exchange/mcp",
-        headers={"Authorization": f"Bearer {eterna_key}"},
+        server_url=MCP_URL,
+        headers={"Authorization": f"Bearer {api_key}"},
     )
     tools = server.tools
     print(f"Loaded {len(tools)} trading tools")
 
-    # Define specialized agents
     analyst = Agent(
         role="Market Analyst",
         goal="Analyze market conditions and identify trading opportunities",
@@ -53,7 +85,6 @@ def main():
         verbose=True,
     )
 
-    # Define tasks
     analysis_task = Task(
         description=(
             "1. Get the current BTC and ETH tickers\n"
@@ -78,7 +109,6 @@ def main():
         agent=risk_manager,
     )
 
-    # Run the crew
     crew = Crew(
         agents=[analyst, risk_manager],
         tasks=[analysis_task, risk_task],
@@ -89,6 +119,19 @@ def main():
     print(f"\n{'=' * 60}")
     print("CREW RESULT:")
     print(result)
+
+
+def main():
+    import asyncio
+
+    # Step 1: Register (only needed once -- save the key for future runs)
+    print("Registering agent...")
+    api_key = asyncio.run(register_agent())
+    print(f"Received API key: {api_key[:20]}...")
+
+    # Step 2: Trade with the key
+    print("\nConnecting with API key...")
+    trade(api_key)
 
 
 if __name__ == "__main__":

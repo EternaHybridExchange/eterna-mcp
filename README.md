@@ -55,16 +55,29 @@ Ask your AI to call `register_agent` -- it gets an API key instantly. Reconnect 
 
 ## Works With Your Stack
 
+No pre-existing API key needed. Your agent connects, registers itself, and starts trading.
+
 ### LangChain
 
 ```python
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+# 1. Connect without auth -- agent calls register_agent to get a key
 async with MultiServerMCPClient({
     "trading": {
         "url": "https://mcp.eterna.exchange/mcp",
         "transport": "streamable_http",
-        "headers": {"Authorization": "Bearer eterna_mcp_your_key"},
+    }
+}) as client:
+    tools = client.get_tools()
+    # Agent calls register_agent, receives API key
+
+# 2. Reconnect with the key -- all trading tools available
+async with MultiServerMCPClient({
+    "trading": {
+        "url": "https://mcp.eterna.exchange/mcp",
+        "transport": "streamable_http",
+        "headers": {"Authorization": f"Bearer {api_key}"},
     }
 }) as client:
     tools = client.get_tools()
@@ -74,29 +87,29 @@ async with MultiServerMCPClient({
 ### AutoGen
 
 ```python
-import autogen
-from autogen.mcp import create_toolkit
+from autogen_ext.tools.mcp import McpWorkbench, StreamableHttpParams
 
-toolkit = await create_toolkit(
-    server_params=StreamableHTTPServerParameters(
-        url="https://mcp.eterna.exchange/mcp",
-        headers={"Authorization": "Bearer eterna_mcp_your_key"},
-    )
-)
-# Register tools with any AutoGen agent
+# 1. Register (no auth needed)
+async with McpWorkbench(StreamableHttpParams(url=MCP_URL)) as wb:
+    tools = await wb.list_tools()  # includes register_agent
+
+# 2. Trade with the key
+async with McpWorkbench(StreamableHttpParams(
+    url=MCP_URL,
+    headers={"Authorization": f"Bearer {api_key}"},
+)) as wb:
+    tools = await wb.list_tools()  # all trading tools
 ```
 
 ### CrewAI
 
 ```python
-from crewai import Agent, Task, Crew
 from crewai_tools.mcp import MCPServerAdapter
 
+# After registration (see examples/ for full flow)
 server = MCPServerAdapter(
-    server_params=StreamableHTTPServerParameters(
-        url="https://mcp.eterna.exchange/mcp",
-        headers={"Authorization": "Bearer eterna_mcp_your_key"},
-    )
+    server_url="https://mcp.eterna.exchange/mcp",
+    headers={"Authorization": f"Bearer {api_key}"},
 )
 tools = server.tools
 # Assign tools to any CrewAI agent
@@ -108,13 +121,21 @@ tools = server.tools
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-async with streamablehttp_client(url, headers=headers) as (r, w, _):
+# 1. Register
+async with streamablehttp_client(url) as (r, w, _):
+    async with ClientSession(r, w) as session:
+        await session.initialize()
+        result = await session.call_tool("register_agent", {"name": "my-bot"})
+        # result contains the API key
+
+# 2. Trade
+async with streamablehttp_client(url, headers={"Authorization": f"Bearer {key}"}) as (r, w, _):
     async with ClientSession(r, w) as session:
         await session.initialize()
         await session.call_tool("get_tickers", {"symbol": "BTCUSDT"})
 ```
 
-Full working examples: [`examples/`](examples/)
+Full working examples with registration flow: [`examples/`](examples/)
 
 ---
 

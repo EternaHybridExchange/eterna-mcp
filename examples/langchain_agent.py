@@ -1,46 +1,83 @@
 """LangChain agent with Eterna MCP trading tools.
 
-Uses langchain-mcp-adapters to connect LangChain to the Eterna MCP Gateway,
-giving any LangChain agent access to perpetual futures trading.
+Demonstrates the full flow:
+1. Connect without authentication
+2. Agent registers itself and receives an API key
+3. Reconnect with the key
+4. Trade using LangChain's ReAct agent
 
 Prerequisites:
     pip install langchain-mcp-adapters langchain-anthropic langgraph
 
 Usage:
     export ANTHROPIC_API_KEY=sk-ant-...
-    export ETERNA_API_KEY=eterna_mcp_your_key_here
     python langchain_agent.py
 """
 
 import asyncio
-import os
+import json
 
 from langchain_anthropic import ChatAnthropic
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 
+MCP_URL = "https://mcp.eterna.exchange/mcp"
 
-async def main():
-    eterna_key = os.environ["ETERNA_API_KEY"]
 
+async def register_agent() -> str:
+    """Connect without auth, call register_agent, return the API key."""
     async with MultiServerMCPClient(
         {
             "trading": {
-                "url": "https://mcp.eterna.exchange/mcp",
+                "url": MCP_URL,
                 "transport": "streamable_http",
-                "headers": {"Authorization": f"Bearer {eterna_key}"},
             }
         }
     ) as client:
-        # Get all trading tools from the MCP server
         tools = client.get_tools()
-        print(f"Loaded {len(tools)} trading tools")
-
-        # Create a ReAct agent with Claude
         llm = ChatAnthropic(model="claude-sonnet-4-6")
         agent = create_react_agent(llm, tools)
 
-        # Run the agent
+        result = await agent.ainvoke(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Register a new trading agent called my-langchain-bot",
+                    }
+                ]
+            }
+        )
+
+        # Extract the API key from the agent's response
+        for message in result["messages"]:
+            if hasattr(message, "content") and isinstance(message.content, str):
+                if "eterna_mcp_" in message.content:
+                    # Find the key in the response text
+                    for word in message.content.split():
+                        if word.startswith("eterna_mcp_"):
+                            return word.strip(".,;:\"'`")
+
+        raise RuntimeError("Failed to extract API key from registration response")
+
+
+async def trade(api_key: str):
+    """Connect with the API key and run a trading agent."""
+    async with MultiServerMCPClient(
+        {
+            "trading": {
+                "url": MCP_URL,
+                "transport": "streamable_http",
+                "headers": {"Authorization": f"Bearer {api_key}"},
+            }
+        }
+    ) as client:
+        tools = client.get_tools()
+        print(f"Loaded {len(tools)} trading tools")
+
+        llm = ChatAnthropic(model="claude-sonnet-4-6")
+        agent = create_react_agent(llm, tools)
+
         result = await agent.ainvoke(
             {
                 "messages": [
@@ -57,10 +94,20 @@ async def main():
             }
         )
 
-        # Print the agent's response
         for message in result["messages"]:
             if hasattr(message, "content") and isinstance(message.content, str):
                 print(f"\n{message.type}: {message.content}")
+
+
+async def main():
+    # Step 1: Register (only needed once -- save the key for future runs)
+    print("Registering agent...")
+    api_key = await register_agent()
+    print(f"Received API key: {api_key[:20]}...")
+
+    # Step 2: Trade with the key
+    print("\nConnecting with API key...")
+    await trade(api_key)
 
 
 if __name__ == "__main__":
