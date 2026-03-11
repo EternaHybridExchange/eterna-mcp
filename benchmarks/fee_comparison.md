@@ -4,23 +4,32 @@
 
 Eterna agents trade through Bybit's master/sub-account structure, which qualifies for institutional-tier fee schedules.
 
+### Futures (USDT Perpetuals)
+
 | Provider | Maker Fee | Taker Fee | How |
 |---|---|---|---|
-| **Eterna MCP** | 0.035% | 0.055% | Master account VIP tier, inherited by sub-accounts |
+| **Eterna MCP** | 0.014% | 0.035% | Master account VIP tier, inherited by sub-accounts |
+| Self-hosted (Bybit default) | 0.020% | 0.055% | Standard retail tier unless you independently qualify |
+| Self-hosted (Bybit VIP 1) | 0.016% | 0.042% | Requires $10M+ monthly volume on your account |
+
+### Spot
+
+| Provider | Maker Fee | Taker Fee | How |
+|---|---|---|---|
+| **Eterna MCP** | 0.065% | 0.0775% | Master account VIP tier, inherited by sub-accounts |
 | Self-hosted (Bybit default) | 0.100% | 0.100% | Standard retail tier unless you independently qualify |
-| Self-hosted (Bybit VIP 1) | 0.040% | 0.060% | Requires $10M+ monthly volume on your account |
-| Binance (default) | 0.020% | 0.050% | Different exchange, different liquidity |
+| Self-hosted (Bybit VIP 1) | 0.060% | 0.080% | Requires $10M+ monthly volume on your account |
 
 ### What this means in practice
 
-For a $10,000 trade:
+For a $10,000 futures trade:
 
 | | Eterna | Self-hosted (default) | Savings |
 |---|---|---|---|
-| **Market order (taker)** | $5.50 | $10.00 | $4.50 per trade |
-| **Limit order (maker)** | $3.50 | $10.00 | $6.50 per trade |
+| **Market order (taker)** | $3.50 | $5.50 | $2.00 per trade |
+| **Limit order (maker)** | $1.40 | $2.00 | $0.60 per trade |
 
-At 10 trades/day, Eterna saves $45-65/day ($1,350-1,950/month) compared to default Bybit fees.
+At 10 futures trades/day, Eterna saves $6-20/day ($180-600/month) compared to default Bybit fees.
 
 ## Infrastructure Costs
 

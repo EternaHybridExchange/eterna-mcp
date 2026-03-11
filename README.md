@@ -2,7 +2,7 @@
 
 **The fastest, cheapest way to give your AI agent real trading capabilities.**
 
-**No KYC. 0.035% fees. <200ms latency. Isolated sub-accounts.**
+**No KYC. 0.014% maker fees on futures. <200ms latency. Isolated sub-accounts.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Streamable_HTTP-green.svg)](https://modelcontextprotocol.io)
@@ -41,7 +41,8 @@ Ask your AI to call `register_agent` -- it gets an API key instantly. Reconnect 
 | **Transport** | HTTP (works remotely) | stdio (local only) | HTTP |
 | **Maintenance** | Zero -- we handle updates | You manage | You manage |
 | **Multi-agent** | Native | Manual config per agent | Manual |
-| **Trading fees** | 0.035% maker / 0.055% taker | Exchange default | Exchange default |
+| **Futures fees** | 0.014% maker / 0.035% taker | 0.02% / 0.055% (default) | 0.02% / 0.055% (default) |
+| **Spot fees** | 0.065% maker / 0.0775% taker | 0.1% / 0.1% (default) | 0.1% / 0.1% (default) |
 
 ### What you don't have to build
 
@@ -189,7 +190,7 @@ See [benchmarks/](benchmarks/) for detailed methodology and data.
 | **Market data** | ~80ms | ~60ms + your infra | ~40ms |
 | **Setup time** | 30 seconds | 15-30 min | 2-4 hours |
 | **Monthly infra cost** | $0 | $5-50/mo (VPS) | $5-50/mo (VPS) |
-| **Trading fees** | 0.035% / 0.055% | 0.1% / 0.1% (default tier) | 0.1% / 0.1% (default tier) |
+| **Futures fees** | 0.014% / 0.035% | 0.02% / 0.055% (default) | 0.02% / 0.055% (default) |
 
 Eterna agents trade on institutional-tier fee schedules through Bybit's master/sub-account structure. Self-hosted servers pay retail fees unless you independently negotiate a VIP tier.
 
