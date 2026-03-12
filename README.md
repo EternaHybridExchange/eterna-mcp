@@ -301,7 +301,7 @@ Copy into your project's `.claude/skills/` directory.
 
 ## Contact
 
-Questions, partnerships, or support: **hello@eterna.exchange**
+Questions, partnerships, or support: **contact@eterna.exchange**
 
 ---
 
