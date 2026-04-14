@@ -40,7 +40,7 @@ Each sub-account is provisioned with Bybit API keys that are scoped to that sub-
 The gateway acts as a secure proxy between the agent and Bybit:
 
 1. Agent sends an MCP tool call to the gateway.
-2. Gateway authenticates the agent via the Bearer token.
+2. Gateway authenticates the agent via OAuth.
 3. Gateway translates the MCP tool call into the appropriate Bybit API request.
 4. Gateway signs the request with the agent's scoped sub-account API key.
 5. Gateway returns the Bybit response as an MCP tool result.
@@ -55,11 +55,11 @@ The gateway uses **MCP Streamable HTTP** as its transport layer.
 
 ### Endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/mcp` | Send MCP requests (tool calls, resource reads, prompt requests) |
-| `GET` | `/mcp` | Open an SSE stream for server-initiated messages |
-| `DELETE` | `/mcp` | Terminate the current session |
+| Method   | Path   | Purpose                                                         |
+| -------- | ------ | --------------------------------------------------------------- |
+| `POST`   | `/mcp` | Send MCP requests (tool calls, resource reads, prompt requests) |
+| `GET`    | `/mcp` | Open an SSE stream for server-initiated messages                |
+| `DELETE` | `/mcp` | Terminate the current session                                   |
 
 ### Sessions
 
@@ -80,12 +80,12 @@ All requests and responses use `application/json` content type following the MCP
 
 The gateway currently supports:
 
-| Property | Value |
-|---|---|
-| **Market type** | Linear (USDT-settled) perpetual futures |
-| **Settlement currency** | USDT |
-| **Margin mode** | Cross margin |
-| **Position mode** | One-way (net position) |
+| Property                | Value                                   |
+| ----------------------- | --------------------------------------- |
+| **Market type**         | Linear (USDT-settled) perpetual futures |
+| **Settlement currency** | USDT                                    |
+| **Margin mode**         | Cross margin                            |
+| **Position mode**       | One-way (net position)                  |
 
 ### What This Means
 

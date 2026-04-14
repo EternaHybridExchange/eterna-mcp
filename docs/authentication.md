@@ -1,6 +1,6 @@
 # Authentication
 
-How API keys work in the Eterna MCP Gateway.
+How authentication works in the Eterna MCP Gateway.
 
 ---
 
@@ -27,68 +27,50 @@ eterna_mcp_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
 
 ---
 
-## Connection Modes
+## OAuth Authentication
 
-The gateway operates in two modes depending on whether an API key is provided:
+Agents authenticate via the MCP protocol's built-in OAuth flow. When your client connects to the gateway for the first time, the OAuth handshake is triggered automatically -- no manual header configuration required.
 
-### Unauthenticated Mode
+### How It Works
 
-When no API key is provided, only one tool is available:
+1. Your MCP client connects to `https://mcp.eterna.exchange/mcp`.
+2. The gateway initiates the OAuth flow through the MCP protocol.
+3. After successful authentication, all 29 SDK methods are available via `execute_code`.
 
-| Tool | Description |
-|---|---|
-| `register_agent` | Create a new agent account and receive an API key |
+### Client Configuration
 
-This allows new agents to self-register without requiring out-of-band key distribution.
-
-### Authenticated Mode
-
-When a valid API key is provided, all 12 tools are available including market data, account management, trading, and funding operations.
-
----
-
-## Providing the API Key
-
-Pass the API key as a Bearer token in the `Authorization` HTTP header:
-
-```
-Authorization: Bearer eterna_mcp_a1b2c3d4e5f6...
-```
-
-In MCP client configuration, this is set via the `headers` field:
+Your client config only needs the server URL:
 
 ```json
 {
   "mcpServers": {
     "eterna-trading": {
       "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp",
-      "headers": {
-        "Authorization": "Bearer eterna_mcp_your_key_here"
-      }
+      "url": "https://mcp.eterna.exchange/mcp"
     }
   }
 }
 ```
 
+No `headers` field is needed. Authentication is handled automatically by the MCP protocol's OAuth flow.
+
 ---
 
 ## Error Handling
 
-### Invalid or Missing Key
+### Authentication Failures
 
-If the API key is invalid, expired, or missing when calling an authenticated tool, the gateway returns an HTTP `401 Unauthorized` response.
+If authentication fails, the gateway returns an error through the MCP protocol.
 
 Common causes:
 
-- Typo in the API key
-- Key was not included in the `Authorization` header
-- Using a key that was never registered
-- Incorrect header format (must be `Bearer <key>`, not just the key)
+- Network connectivity issues preventing the OAuth handshake
+- Expired or revoked credentials
+- Client does not support the MCP OAuth flow
 
 ### Troubleshooting
 
-1. Verify the key starts with `eterna_mcp_` and is exactly 75 characters.
-2. Confirm the `Authorization` header uses the `Bearer ` prefix (with a space).
-3. Check that the header is being sent with every request (some clients may strip custom headers).
-4. If the key is lost, register a new agent with `register_agent`.
+1. Verify your MCP client supports Streamable HTTP transport with OAuth.
+2. Check network connectivity to `https://mcp.eterna.exchange`.
+3. Restart your MCP client to re-trigger the OAuth flow.
+4. If problems persist, contact **contact@eterna.exchange**.

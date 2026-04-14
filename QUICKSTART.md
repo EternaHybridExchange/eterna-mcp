@@ -49,27 +49,7 @@ The agent calls `register_agent` and receives an API key like `eterna_mcp_a1b2c3
 
 **Save this key immediately** -- it is shown only once.
 
-## Step 3: Authenticate (30 seconds)
-
-Update your config to include the API key:
-
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp",
-      "headers": {
-        "Authorization": "Bearer eterna_mcp_a1b2c3d4e5f6..."
-      }
-    }
-  }
-}
-```
-
-Restart your client again.
-
-## Step 4: Deposit (2-3 minutes)
+## Step 3: Deposit (2-3 minutes)
 
 Ask your agent:
 
@@ -83,7 +63,7 @@ Once the deposit confirms, ask:
 
 The agent calls `transfer_to_trading` to move funds into your trading account.
 
-## Step 5: Trade
+## Step 4: Trade
 
 Ask your agent:
 
@@ -102,6 +82,6 @@ Ask your agent:
 ## What's Next?
 
 - **[Strategies](docs/strategies.md)** -- Momentum scalping and position sizing workflows
-- **[Tools Reference](docs/tools-reference.md)** -- Full parameter docs for all 12 tools
+- **[Tools Reference](docs/tools-reference.md)** -- Full SDK method reference
 - **[Examples](examples/)** -- LangChain, AutoGen, CrewAI, and raw Python integrations
 - **[Skills](skills/)** -- Give Claude Code domain-specific trading knowledge
