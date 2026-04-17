@@ -4,12 +4,22 @@ This guide gets you from zero to placing your first trade with an AI agent.
 
 ## Prerequisites
 
-- An MCP-compatible client: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.sh), [Claude Desktop](https://claude.ai/download), or any client supporting Streamable HTTP
+- An MCP-compatible client: [claude.ai](https://claude.ai), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.sh), [Claude Desktop](https://claude.ai/download), or any client supporting Streamable HTTP
 - USDT for trading (you'll deposit after setup)
 
 ## Step 1: Connect (30 seconds)
 
-Add the Eterna MCP Gateway to your client config.
+Add the Eterna MCP Gateway to your client. Pick your platform:
+
+**claude.ai** -- add as a custom connector:
+
+1. Copy the MCP URL: `https://mcp.eterna.exchange/mcp`
+2. Go to [claude.ai/customize/connectors](https://claude.ai/customize/connectors)
+3. Click **+** then **Add custom connector**
+4. Name it **Eterna**, paste the MCP URL
+5. Click **Connect**
+6. Click **Sign in with Google**
+7. Click **Approve**
 
 **Claude Code** -- create `.mcp.json` in your project root:
 
@@ -37,7 +47,7 @@ Add the Eterna MCP Gateway to your client config.
 }
 ```
 
-Restart your client to pick up the new server.
+Restart your client to pick up the new server (not needed for claude.ai).
 
 ## Step 2: Register (30 seconds)
 
@@ -51,7 +61,9 @@ The agent calls `register_agent` and receives an API key like `eterna_mcp_a1b2c3
 
 ## Step 3: Authenticate (30 seconds)
 
-Update your config to include the API key:
+**claude.ai** -- authentication is handled automatically via the OAuth sign-in during connector setup. No extra config needed.
+
+**Claude Code / Cursor** -- update your config to include the API key:
 
 ```json
 {
