@@ -16,38 +16,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Package claude-ai skills
+      - name: Package claude-ai skill
         run: |
           mkdir -p dist
 
-          # Create a staging directory with the expected structure:
-          # eterna-skills/
-          #   trade/Skill.md
-          #   market-scan/Skill.md
-          #   ...
-          mkdir -p staging/eterna-skills
+          # Structure expected by claude.ai:
+          # eterna-trading/
+          #   Skill.md
+          #   resources/
+          #     market-scan.md
+          #     deposit.md
+          #     ...
+          mkdir -p staging/eterna-trading
 
-          for skill_dir in skills/claude-ai/*/; do
-            skill_name=$(basename "$skill_dir")
-            mkdir -p "staging/eterna-skills/${skill_name}"
-            cp "${skill_dir}SKILL.md" "staging/eterna-skills/${skill_name}/Skill.md"
-          done
+          cp skills/claude-ai/Skill.md staging/eterna-trading/Skill.md
+
+          if [ -d skills/claude-ai/resources ]; then
+            cp -r skills/claude-ai/resources staging/eterna-trading/resources
+          fi
 
           cd staging
-          zip -r ../dist/eterna-skills.zip eterna-skills/
+          zip -r ../dist/eterna-trading.zip eterna-trading/
           cd ..
 
-          echo "## Packaged skills:" >> "$GITHUB_STEP_SUMMARY"
-          ls -la dist/
+          echo "## Packaged skill:" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          unzip -l dist/eterna-skills.zip >> "$GITHUB_STEP_SUMMARY"
+          unzip -l dist/eterna-trading.zip >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: eterna-skills
-          path: dist/eterna-skills.zip
+          name: eterna-trading
+          path: dist/eterna-trading.zip
 
       - name: Create or update release
         env:
@@ -59,13 +60,13 @@ jobs:
           git push origin --delete "$RELEASE_TAG" 2>/dev/null || true
 
           gh release create "$RELEASE_TAG" \
-            --title "Eterna Skills for Claude.ai" \
-            --notes "Claude.ai skills for trading with Eterna MCP Gateway.
+            --title "Eterna Trading Skill for Claude.ai" \
+            --notes "Trading skill for Claude.ai with Eterna MCP Gateway.
 
-          Download **eterna-skills.zip**, unzip, and add each skill folder to your Claude.ai project.
+          **Download eterna-trading.zip** and upload it to your Claude.ai project as a skill.
 
-          Each skill contains a Skill.md file that teaches Claude how to use the Eterna MCP tools.
-
-          **Skills included:** trade (router), market-scan, deposit, open-position, close-position, withdraw" \
+          Contains:
+          - **Skill.md** — core trading agent instructions (router, market analysis, trading, deposits, withdrawals)
+          - **resources/** — detailed per-capability guides loaded by Claude on demand" \
             --latest \
-            dist/eterna-skills.zip
+            dist/eterna-trading.zip
