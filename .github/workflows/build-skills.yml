@@ -50,23 +50,26 @@ jobs:
           name: eterna-trading
           path: dist/eterna-trading.zip
 
-      - name: Create or update release
+      - name: Upload to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: skills-latest
         run: |
-          # Delete existing release if it exists
-          gh release delete "$RELEASE_TAG" --yes 2>/dev/null || true
-          git push origin --delete "$RELEASE_TAG" 2>/dev/null || true
-
-          gh release create "$RELEASE_TAG" \
-            --title "Eterna Trading Skill for Claude.ai" \
-            --notes "Trading skill for Claude.ai with Eterna MCP Gateway.
+          # Create release if it doesn't exist, or upload asset to existing one
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            # Delete old asset and upload new one
+            gh release delete-asset "$RELEASE_TAG" eterna-trading.zip --yes 2>/dev/null || true
+            gh release upload "$RELEASE_TAG" dist/eterna-trading.zip --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              --title "Eterna Trading Skill for Claude.ai" \
+              --notes "Trading skill for Claude.ai with Eterna MCP Gateway.
 
           **Download eterna-trading.zip** and upload it to your Claude.ai project as a skill.
 
           Contains:
           - **Skill.md** — core trading agent instructions (router, market analysis, trading, deposits, withdrawals)
           - **resources/** — detailed per-capability guides loaded by Claude on demand" \
-            --latest \
-            dist/eterna-trading.zip
+              --latest \
+              dist/eterna-trading.zip
+          fi
