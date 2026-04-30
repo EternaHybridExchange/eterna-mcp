@@ -1,0 +1,71 @@
+name: Build Skills Zip
+
+on:
+  push:
+    branches: [main, feat/workshop]
+    paths:
+      - 'skills/claude-ai/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package claude-ai skills
+        run: |
+          mkdir -p dist
+
+          # Create a staging directory with the expected structure:
+          # eterna-skills/
+          #   trade/Skill.md
+          #   market-scan/Skill.md
+          #   ...
+          mkdir -p staging/eterna-skills
+
+          for skill_dir in skills/claude-ai/*/; do
+            skill_name=$(basename "$skill_dir")
+            mkdir -p "staging/eterna-skills/${skill_name}"
+            cp "${skill_dir}SKILL.md" "staging/eterna-skills/${skill_name}/Skill.md"
+          done
+
+          cd staging
+          zip -r ../dist/eterna-skills.zip eterna-skills/
+          cd ..
+
+          echo "## Packaged skills:" >> "$GITHUB_STEP_SUMMARY"
+          ls -la dist/
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          unzip -l dist/eterna-skills.zip >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eterna-skills
+          path: dist/eterna-skills.zip
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: skills-latest
+        run: |
+          # Delete existing release if it exists
+          gh release delete "$RELEASE_TAG" --yes 2>/dev/null || true
+          git push origin --delete "$RELEASE_TAG" 2>/dev/null || true
+
+          gh release create "$RELEASE_TAG" \
+            --title "Eterna Skills for Claude.ai" \
+            --notes "Claude.ai skills for trading with Eterna MCP Gateway.
+
+          Download **eterna-skills.zip**, unzip, and add each skill folder to your Claude.ai project.
+
+          Each skill contains a Skill.md file that teaches Claude how to use the Eterna MCP tools.
+
+          **Skills included:** trade (router), market-scan, deposit, open-position, close-position, withdraw" \
+            --latest \
+            dist/eterna-skills.zip
