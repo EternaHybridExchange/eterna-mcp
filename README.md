@@ -1,18 +1,26 @@
 # Eterna MCP Gateway
 
-**The fastest, cheapest way to give your AI agent real trading capabilities.**
+This repository is now a compatibility entry point for the Eterna AI MCP integration.
 
-**No KYC. 0.014% maker fees on futures. <200ms latency. Isolated sub-accounts.**
+The canonical public repository is:
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![MCP Protocol](https://img.shields.io/badge/MCP-Streamable_HTTP-green.svg)](https://modelcontextprotocol.io)
-[![Tools](https://img.shields.io/badge/Tools-12-orange.svg)](#available-tools)
+https://github.com/EternaHybridExchange/eterna-ai
 
----
+## Current MCP Model
 
-## 30-Second Install
+Eterna AI uses an OAuth-based, code-execution-first MCP model.
 
-Add to your MCP client config and you're trading:
+Agents connect to the managed Eterna MCP endpoint and use three MCP tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `execute_code` | Run TypeScript/JavaScript in a managed sandbox with the injected `eterna.*` SDK. |
+| `search_sdk` | Search sandbox SDK documentation by method name, keyword, or detail level. |
+| `search_examples` | Search curated and ingested code examples for common trading workflows. |
+
+The old `register_agent` API-key flow and old direct-tool MCP interface are stale. New integrations should use OAuth and the `execute_code` workflow.
+
+## MCP Configuration
 
 ```json
 {
@@ -25,286 +33,40 @@ Add to your MCP client config and you're trading:
 }
 ```
 
-Ask your AI to call `register_agent` -- it gets an API key instantly. Reconnect with the key in the `Authorization` header and start trading. See [QUICKSTART.md](QUICKSTART.md) for a 5-minute walkthrough.
+## Example
 
----
+Ask your MCP client to run:
 
-## Why Eterna?
+```typescript
+const [balance, ticker] = await Promise.all([
+  eterna.getBalance(),
+  eterna.getTickers("BTCUSDT"),
+]);
 
-| | Eterna (managed) | Self-hosted MCP servers | Direct API wrappers |
-|---|---|---|---|
-| **Setup time** | 30 seconds | 15-30 min | Hours |
-| **API key management** | Auto-provisioned | You create & rotate | You create & rotate |
-| **Agent isolation** | Dedicated sub-account per agent | Shared account | Shared account |
-| **Risk management** | Built-in (leverage caps, position limits) | None | Build your own |
-| **Key security** | Argon2-hashed, never exposed | Plaintext env vars | Plaintext env vars |
-| **Transport** | HTTP (works remotely) | stdio (local only) | HTTP |
-| **Maintenance** | Zero -- we handle updates | You manage | You manage |
-| **Multi-agent** | Native | Manual config per agent | Manual |
-| **Futures fees** | 0.014% maker / 0.035% taker | 0.02% / 0.055% (default) | 0.02% / 0.055% (default) |
-| **Spot fees** | 0.065% maker / 0.0775% taker | 0.1% / 0.1% (default) | 0.1% / 0.1% (default) |
-
-### What you don't have to build
-
-- Sub-account provisioning and API key rotation
-- Rate limiting and request validation
-- Position sizing guardrails
-- Deposit address management and fund routing
-- Error handling for exchange API changes
-
----
-
-## Works With Your Stack
-
-No pre-existing API key needed. Your agent connects, registers itself, and starts trading.
-
-### LangChain
-
-```python
-from langchain_mcp_adapters.client import MultiServerMCPClient
-
-# 1. Connect without auth -- agent calls register_agent to get a key
-async with MultiServerMCPClient({
-    "trading": {
-        "url": "https://mcp.eterna.exchange/mcp",
-        "transport": "streamable_http",
-    }
-}) as client:
-    tools = client.get_tools()
-    # Agent calls register_agent, receives API key
-
-# 2. Reconnect with the key -- all trading tools available
-async with MultiServerMCPClient({
-    "trading": {
-        "url": "https://mcp.eterna.exchange/mcp",
-        "transport": "streamable_http",
-        "headers": {"Authorization": f"Bearer {api_key}"},
-    }
-}) as client:
-    tools = client.get_tools()
-    # Use tools with any LangChain agent
+return {
+  equity: balance.list[0].totalEquity,
+  availableBalance: balance.list[0].totalAvailableBalance,
+  btc: {
+    price: ticker.list[0].lastPrice,
+    change24h: ticker.list[0].price24hPcnt,
+    fundingRate: ticker.list[0].fundingRate,
+  },
+};
 ```
 
-### AutoGen
+## Canonical Docs
 
-```python
-from autogen_ext.tools.mcp import McpWorkbench, StreamableHttpParams
+Use the docs in `eterna-ai` as the source of truth:
 
-# 1. Register (no auth needed)
-async with McpWorkbench(StreamableHttpParams(url=MCP_URL)) as wb:
-    tools = await wb.list_tools()  # includes register_agent
+- MCP: https://github.com/EternaHybridExchange/eterna-ai/blob/main/docs/mcp.md
+- Sandbox SDK: https://github.com/EternaHybridExchange/eterna-ai/blob/main/docs/sdk.md
+- CLI: https://github.com/EternaHybridExchange/eterna-ai/tree/main/packages/cli
+- OpenClaw plugin: https://github.com/EternaHybridExchange/eterna-ai/tree/main/packages/openclaw-plugin
 
-# 2. Trade with the key
-async with McpWorkbench(StreamableHttpParams(
-    url=MCP_URL,
-    headers={"Authorization": f"Bearer {api_key}"},
-)) as wb:
-    tools = await wb.list_tools()  # all trading tools
-```
+## What Remains Here
 
-### CrewAI
-
-```python
-from crewai_tools.mcp import MCPServerAdapter
-
-# After registration (see examples/ for full flow)
-server = MCPServerAdapter(
-    server_url="https://mcp.eterna.exchange/mcp",
-    headers={"Authorization": f"Bearer {api_key}"},
-)
-tools = server.tools
-# Assign tools to any CrewAI agent
-```
-
-### Raw Python (MCP SDK)
-
-```python
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
-
-# 1. Register
-async with streamablehttp_client(url) as (r, w, _):
-    async with ClientSession(r, w) as session:
-        await session.initialize()
-        result = await session.call_tool("register_agent", {"name": "my-bot"})
-        # result contains the API key
-
-# 2. Trade
-async with streamablehttp_client(url, headers={"Authorization": f"Bearer {key}"}) as (r, w, _):
-    async with ClientSession(r, w) as session:
-        await session.initialize()
-        await session.call_tool("get_tickers", {"symbol": "BTCUSDT"})
-```
-
-Full working examples with registration flow: [`examples/`](examples/)
-
----
-
-## Available Tools
-
-| Category | Tool | Description |
-|---|---|---|
-| **Registration** | `register_agent` | Create a new agent account and receive an API key |
-| **Market Data** | `get_tickers` | Current price, 24h change, volume, and funding rate |
-| | `get_instruments` | Contract specifications, tick size, lot size, leverage limits |
-| | `get_orderbook` | Live order book with bids and asks |
-| **Account** | `get_balance` | USDT equity, available balance, and margin usage |
-| | `get_positions` | Open positions with entry price, PnL, and leverage |
-| | `get_orders` | Active and recent order history |
-| **Trading** | `place_order` | Place market or limit orders with TP/SL |
-| | `close_position` | Close an entire position at market price |
-| **Funding** | `get_deposit_address` | Get deposit address for a coin and chain |
-| | `get_deposit_records` | View deposit history |
-| | `transfer_to_trading` | Move funds from Funding wallet to Trading wallet |
-
-See [docs/tools-reference.md](docs/tools-reference.md) for full parameter and return value documentation.
-
----
-
-## Resources & Prompts
-
-**MCP Resources:**
-
-| Resource URI | Description |
-|---|---|
-| `eterna://risk-rules` | JSON document with all risk constraints (max leverage, max positions, minimum balance) |
-| `eterna://api-reference` | Complete tool reference with parameters, types, and return schemas |
-
-**Built-in Prompts:**
-
-| Prompt | Description |
-|---|---|
-| `trading_guide` | Risk management, position sizing, deposits, and order lifecycle |
-| `momentum_scalping_strategy` | Step-by-step momentum scalping with entry/exit rules |
-| `place_trade` | Interactive prompt that walks through placing a trade safely |
-
----
-
-## Benchmarks
-
-See [benchmarks/](benchmarks/) for detailed methodology and data.
-
-| Metric | Eterna MCP | Self-hosted Bybit MCP | Direct Bybit API |
-|---|---|---|---|
-| **Order placement** | ~180ms | ~150ms + your infra | ~120ms |
-| **Market data** | ~80ms | ~60ms + your infra | ~40ms |
-| **Setup time** | 30 seconds | 15-30 min | 2-4 hours |
-| **Monthly infra cost** | $0 | $5-50/mo (VPS) | $5-50/mo (VPS) |
-| **Futures fees** | 0.014% / 0.035% | 0.02% / 0.055% (default) | 0.02% / 0.055% (default) |
-
-Eterna agents trade on institutional-tier fee schedules through Bybit's master/sub-account structure. Self-hosted servers pay retail fees unless you independently negotiate a VIP tier.
-
----
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for the full roadmap.
-
-**Coming soon:**
-- 130+ additional Bybit API endpoints (order management, position controls, market data)
-- Code execution sandbox -- submit TypeScript strategies that run in an isolated environment
-- Strategy runtime -- deploy strategies on cron schedules, zero LLM at runtime
-- Backtesting engine with historical data replay
-
----
-
-## Client Configuration
-
-### Claude Code
-
-`.mcp.json` in your project root:
-
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp",
-      "headers": {
-        "Authorization": "Bearer eterna_mcp_your_key_here"
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-`.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp",
-      "headers": {
-        "Authorization": "Bearer eterna_mcp_your_key_here"
-      }
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-Add to your Claude Desktop `config.json`:
-
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp",
-      "headers": {
-        "Authorization": "Bearer eterna_mcp_your_key_here"
-      }
-    }
-  }
-}
-```
-
----
-
-## Skills
-
-Claude Code skills for trading knowledge:
-
-- **[skills/claude-code/trading/SKILL.md](skills/claude-code/trading/SKILL.md)** -- Risk management, position sizing, deposit flow, order lifecycle
-- **[skills/claude-code/scalping/SKILL.md](skills/claude-code/scalping/SKILL.md)** -- Momentum scalping strategy with entry signals and exit rules
-
-Copy into your project's `.claude/skills/` directory.
-
----
-
-## Documentation
-
-- [QUICKSTART.md](QUICKSTART.md) -- Trading in 5 minutes
-- [Tools Reference](docs/tools-reference.md) -- Full parameter and return value docs
-- [Authentication](docs/authentication.md) -- API key format, security model, connection modes
-- [Architecture](docs/architecture.md) -- Agent isolation, transport protocol, market support
-- [Strategies](docs/strategies.md) -- Momentum scalping and position sizing workflows
-- [CHANGELOG.md](CHANGELOG.md) -- Version history
-- [ROADMAP.md](ROADMAP.md) -- What's coming next
-
----
-
-## Ecosystem
-
-| Repository | Description |
-|---|---|
-| [eterna-exchange/bybit-mcp-server](https://github.com/eterna-exchange/bybit-mcp-server) | Bybit-focused managed MCP server |
-| [eterna-exchange/mcp-trading-agent](https://github.com/eterna-exchange/mcp-trading-agent) | IDE configs and trading strategies for Claude Code, Cursor, Claude Desktop |
-| [eterna-exchange/awesome-mcp-trading](https://github.com/eterna-exchange/awesome-mcp-trading) | Curated list of MCP trading servers and resources |
-
----
-
-## Contact
-
-Questions, partnerships, or support: **contact@eterna.exchange**
-
----
+Historical docs and examples in this repository may refer to the old API-key/direct-tool model. Treat them as archival until they are migrated or removed.
 
 ## License
 
-[MIT](LICENSE) -- Copyright 2025 Eterna Exchange
+MIT
