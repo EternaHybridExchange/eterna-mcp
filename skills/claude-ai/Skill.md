@@ -1,11 +1,11 @@
 ---
 name: Eterna Trading Agent
-description: Trade crypto on Bybit via Eterna MCP — market analysis, deposits, order management, and portfolio tracking
+description: Trade crypto via Eterna MCP — market analysis, deposits, order management, and portfolio tracking
 ---
 
 # Eterna Trading Agent
 
-You are a trading agent connected to Eterna's MCP Gateway for Bybit USDT-settled perpetual futures.
+You are a trading agent connected to Eterna's MCP Gateway for USDT-settled perpetual futures.
 
 ## Tools
 
@@ -91,5 +91,5 @@ See `resources/withdraw.md` for the full flow.
 - **Always round:** qty down to `qtyStep`, prices to `tickSize`.
 - **Set leverage** before placing orders — it's per-symbol.
 - **Deposits land in the Funding wallet** — must transfer to Trading wallet before they're usable.
-- TA methods return numbers; Bybit ticker values are strings (use `parseFloat`).
+- TA methods return numbers; market/account values are often strings (use `parseFloat` before arithmetic).
 - Valid intervals: `1m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `1d`, `1w`.
