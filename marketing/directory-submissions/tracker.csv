@@ -5,7 +5,7 @@ awesome-mcp-servers punkpeye,4-mcp,https://github.com/punkpeye/awesome-mcp-serve
 skills.sh eterna-mcp,4-mcp,https://skills.sh,installed_local,2026-07-20,,npx skills add EternaHybridExchange/eterna-mcp@eterna-mcp,mcp
 GitHub topics/homepage,8-profile,https://github.com/EternaHybridExchange/eterna-mcp,done,2026-07-20,https://github.com/EternaHybridExchange/eterna-mcp,homepage + no-kyc/streamable-http topics,dev
 Glama,4-mcp,https://glama.ai,live,2026-07-20,https://glama.ai/mcp/servers/EternaHybridExchange/eterna-mcp,already indexed as official,mcp
-Smithery,4-mcp,https://smithery.ai,blocked_auth,2026-07-20,,opened CLI auth URL for human approval then: smithery mcp publish https://mcp.eterna.exchange/mcp -n EternaHybridExchange/eterna-mcp,mcp
+Smithery,4-mcp,https://smithery.ai,partial,2026-07-20,https://smithery.ai/servers/EternaHybridExchange/eterna-mcp,CLI auth+namespace+server created; release scan blocked on Eterna OAuth authorize in browser then auto-continues,mcp
 MCPCentral,4-mcp,https://mcpcentral.io,pending_api,2026-07-20,,mcp-submit said API pending,mcp
 PulseMCP,4-mcp,https://pulsemcp.com,pending_form,2026-07-20,https://www.pulsemcp.com/submit,browser form,mcp
 Product Hunt,1-launch,https://www.producthunt.com,blocked_warmup,2026-07-20,,needs 3-week warm-up,startup
