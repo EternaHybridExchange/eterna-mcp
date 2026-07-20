@@ -1,18 +1,11 @@
 directory,tier,url,status,date,listing_url,notes,copy_variant
-Official MCP Registry,4-mcp,https://registry.modelcontextprotocol.io,in_progress,2026-07-20,,server.json io.github.EternaHybridExchange/eterna-mcp,mcp
-mcp-submit batch,4-mcp,https://github.com/jordanlyall/mcp-submit,pending,2026-07-20,,Smithery MCPCentral mcp.so awesome,mcp
-skills.sh eterna-mcp,4-mcp,https://skills.sh,pending,2026-07-20,,skills/eterna-mcp in docs repo,mcp
-GitHub topics/homepage,8-profile,https://github.com/EternaHybridExchange/eterna-mcp,pending,2026-07-20,,topics + homepage ai.eterna.exchange,dev
-Glama (auto),4-mcp,https://glama.ai,pending,2026-07-20,,auto-index after Registry/GitHub,mcp
-PulseMCP,4-mcp,https://pulsemcp.com,pending,2026-07-20,,sync or form after Registry,mcp
-mcp.so,4-mcp,https://mcp.so,pending,2026-07-20,,via mcp-submit GitHub issue,mcp
-awesome-mcp-servers punkpeye,4-mcp,https://github.com/punkpeye/awesome-mcp-servers,pending,2026-07-20,,PR,mcp
-TAAFT,3-ai,https://theresanaiforthat.com,pending,2026-07-20,,AI copy variant,ai
-Futurepedia,3-ai,https://www.futurepedia.io,pending,2026-07-20,,AI copy variant,ai
-Toolify,3-ai,https://www.toolify.ai,pending,2026-07-20,,AI copy variant,ai
-DevHunt,1-launch,https://devhunt.org,pending,2026-07-20,,dev/startup copy,startup
-Fazier,1-launch,https://fazier.com,pending,2026-07-20,,startup copy,startup
-Uneed,1-launch,https://uneed.best,pending,2026-07-20,,startup copy,startup
-AlternativeTo,2-saas,https://alternativeto.net,pending,2026-07-20,,alternatives framing,saas
-SaaSHub,2-saas,https://www.saashub.com,pending,2026-07-20,,alternatives framing,saas
-Product Hunt,1-launch,https://www.producthunt.com,blocked_warmup,2026-07-20,,needs 3-week warm-up per skill,startup
+Official MCP Registry,4-mcp,https://registry.modelcontextprotocol.io,live,2026-07-20,https://registry.modelcontextprotocol.io/v0/servers?search=eterna,io.github.EternaHybridExchange/eterna-mcp v1.0.0 active,mcp
+mcp.so,4-mcp,https://mcp.so,submitted,2026-07-20,https://github.com/chatmcp/mcpso/issues/3249,issue + enrichment comment,mcp
+awesome-mcp-servers punkpeye,4-mcp,https://github.com/punkpeye/awesome-mcp-servers,pr_open,2026-07-20,https://github.com/punkpeye/awesome-mcp-servers/pull/10537,Finance & Fintech entry,mcp
+skills.sh eterna-mcp,4-mcp,https://skills.sh,installed_local,2026-07-20,,npx skills add EternaHybridExchange/eterna-mcp@eterna-mcp,mcp
+GitHub topics/homepage,8-profile,https://github.com/EternaHybridExchange/eterna-mcp,done,2026-07-20,https://github.com/EternaHybridExchange/eterna-mcp,homepage + no-kyc/streamable-http topics,dev
+Glama (auto),4-mcp,https://glama.ai,pending_index,2026-07-20,,should index from GitHub/Registry,mcp
+Smithery,4-mcp,https://smithery.ai,blocked_auth,2026-07-20,,needs smithery auth login then mcp publish,mcp
+MCPCentral,4-mcp,https://mcpcentral.io,pending_api,2026-07-20,,mcp-submit said API pending,mcp
+PulseMCP,4-mcp,https://pulsemcp.com,pending_form,2026-07-20,https://www.pulsemcp.com/submit,browser form,mcp
+Product Hunt,1-launch,https://www.producthunt.com,blocked_warmup,2026-07-20,,needs 3-week warm-up,startup
