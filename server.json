@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.EternaHybridExchange/eterna-mcp",
+  "title": "Eterna MCP",
+  "description": "Managed MCP trading exchange for AI agents: sandboxed TypeScript execution, 29 SDK methods, no KYC, isolated sub-accounts, perpetual futures with institutional fees.",
+  "version": "1.0.0",
+  "websiteUrl": "https://ai.eterna.exchange",
+  "repository": {
+    "url": "https://github.com/EternaHybridExchange/eterna-mcp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.eterna.exchange/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer token from OAuth (ai-auth) or agent API key after register_agent. See https://github.com/EternaHybridExchange/eterna-mcp/blob/main/docs/authentication.md",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
