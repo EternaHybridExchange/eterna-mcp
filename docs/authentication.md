@@ -1,66 +1,57 @@
 # Authentication
 
-How API keys work in the Eterna MCP Gateway.
+How agents authenticate to the Eterna MCP Gateway.
+
+**Gateway:** `https://mcp.eterna.exchange/mcp`  
+**OAuth issuer:** `https://ai-auth.eterna.exchange`  
+**Scope:** `mcp:full`
 
 ---
 
-## API Key Format
+## Preferred: OAuth
 
-```
-eterna_mcp_<64 hexadecimal characters>
-```
+Claude connectors, Cursor MCP, and most modern MCP clients use OAuth.
 
-Total length: **75 characters**.
+1. Client reads protected-resource / authorization-server metadata.
+2. User completes sign-in / consent.
+3. Client calls MCP with `Authorization: Bearer <access_token>`.
+4. On first successful OAuth identity, the gateway **auto-provisions** an isolated agent sub-account (lazy Bybit sub-account on first trading use).
 
-Example:
+There is **no** `register_agent` MCP tool.
 
-```
-eterna_mcp_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
-```
+### Discovery endpoints
 
-## Key Generation
-
-- Generated using cryptographically secure random bytes.
-- The raw key is hashed with **Argon2** before storage. The gateway never stores plaintext keys.
-- The key is returned **exactly once** during `register_agent`. There is no way to retrieve it later.
-- Treat your API key like a password. If lost, you must register a new agent.
-
----
-
-## Connection Modes
-
-The gateway operates in two modes depending on whether an API key is provided:
-
-### Unauthenticated Mode
-
-When no API key is provided, only one tool is available:
-
-| Tool | Description |
+| Resource | URL |
 |---|---|
-| `register_agent` | Create a new agent account and receive an API key |
+| OAuth authorization server | `https://ai-auth.eterna.exchange/.well-known/oauth-authorization-server` |
+| Protected resource (AI landing) | `https://ai.eterna.exchange/.well-known/oauth-protected-resource` |
+| Protected resource (MCP host) | `https://mcp.eterna.exchange/.well-known/oauth-protected-resource` |
+| MCP server card | `https://ai.eterna.exchange/.well-known/mcp/server-card.json` |
 
-This allows new agents to self-register without requiring out-of-band key distribution.
-
-### Authenticated Mode
-
-When a valid API key is provided, all 12 tools are available including market data, account management, trading, and funding operations.
+Human-readable mirror: https://ai.eterna.exchange/auth.md
 
 ---
 
-## Providing the API Key
+## Legacy: agent API keys
 
-Pass the API key as a Bearer token in the `Authorization` HTTP header:
+Custom clients and CLI workflows may still use long-lived agent API keys:
 
 ```
-Authorization: Bearer eterna_mcp_a1b2c3d4e5f6...
+Authorization: Bearer eterna_mcp_<hex…>
 ```
 
-In MCP client configuration, this is set via the `headers` field:
+### Security model
+
+- Keys are generated with cryptographically secure randomness.
+- The gateway stores an **Argon2** hash, never plaintext.
+- Treat the key like a password. If lost, mint a new key via the supported CLI / account flow (do not expect a `register_agent` tool).
+
+### Client config example
 
 ```json
 {
   "mcpServers": {
-    "eterna-trading": {
+    "eterna": {
       "type": "streamable-http",
       "url": "https://mcp.eterna.exchange/mcp",
       "headers": {
@@ -71,24 +62,36 @@ In MCP client configuration, this is set via the `headers` field:
 }
 ```
 
+OAuth clients should **omit** a hardcoded API key and complete the connector sign-in instead.
+
 ---
 
-## Error Handling
+## What auth unlocks
 
-### Invalid or Missing Key
+Once authenticated, the agent can call:
 
-If the API key is invalid, expired, or missing when calling an authenticated tool, the gateway returns an HTTP `401 Unauthorized` response.
+- `search_sdk`
+- `execute_code`
+- `search_examples`
 
-Common causes:
+plus prompts/resources (`getting_started`, `eterna://docs/sdk`, …).
 
-- Typo in the API key
-- Key was not included in the `Authorization` header
-- Using a key that was never registered
-- Incorrect header format (must be `Bearer <key>`, not just the key)
+Unauthenticated trading is not supported.
+
+---
+
+## Common errors
+
+### `401 Unauthorized`
+
+- Missing `Authorization` header
+- Expired OAuth access token (refresh / re-auth)
+- Typo in legacy API key
+- Client stripped custom headers
 
 ### Troubleshooting
 
-1. Verify the key starts with `eterna_mcp_` and is exactly 75 characters.
-2. Confirm the `Authorization` header uses the `Bearer ` prefix (with a space).
-3. Check that the header is being sent with every request (some clients may strip custom headers).
-4. If the key is lost, register a new agent with `register_agent`.
+1. Confirm the MCP URL is exactly `https://mcp.eterna.exchange/mcp`.
+2. For OAuth clients, re-run connector sign-in.
+3. For API keys, confirm `Bearer ` prefix (with a space).
+4. Verify the client keeps headers on every MCP HTTP request.

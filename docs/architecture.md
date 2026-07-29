@@ -4,14 +4,28 @@ Technical overview of the Eterna MCP Gateway design.
 
 ---
 
+## Execution model
+
+Agents do not call one MCP tool per exchange endpoint.
+
+```
+Agent  -->  MCP tools (search_sdk / execute_code / search_examples)
+       -->  Deno sandbox + eterna.* SDK
+       -->  Gateway signs Bybit requests with the agent's scoped sub-account key
+```
+
+`execute_code` runs user TypeScript in an isolated sandbox. The SDK proxy is the only path to exchange APIs.
+
+---
+
 ## Agent Isolation
 
-Each registered agent receives a **dedicated Bybit sub-account**. This provides strong isolation between agents:
+Each authenticated agent receives a **dedicated Bybit sub-account** (provisioned lazily):
 
-- **Separate balances** -- funds deposited by one agent are not visible to others.
-- **Separate positions** -- each agent manages its own positions independently.
-- **Separate API credentials** -- the gateway holds scoped sub-account API keys that can only operate on that agent's sub-account.
-- **No cross-contamination** -- one agent cannot view, modify, or interact with another agent's account in any way.
+- **Separate balances** — funds deposited by one agent are not visible to others.
+- **Separate positions** — each agent manages its own positions independently.
+- **Separate exchange credentials** — the gateway holds scoped sub-account API keys that can only operate on that agent's sub-account.
+- **No cross-contamination** — one agent cannot view, modify, or interact with another agent's account.
 
 ```
 Agent A  -->  Gateway  -->  Bybit Sub-Account A
@@ -19,13 +33,19 @@ Agent B  -->  Gateway  -->  Bybit Sub-Account B
 Agent C  -->  Gateway  -->  Bybit Sub-Account C
 ```
 
+Identity comes from OAuth (`oauthUserId`) or a legacy agent API key.
+
 ---
 
 ## Security Model
 
-### API Key Hashing
+### OAuth (preferred)
 
-Agent API keys are hashed using **Argon2** (the winner of the Password Hashing Competition) before storage. The gateway never persists plaintext keys. Even in the event of a database breach, API keys cannot be recovered.
+Claude / Cursor connectors authenticate against `https://ai-auth.eterna.exchange` with scope `mcp:full`. The gateway validates the JWT and auto-provisions the agent record.
+
+### Legacy API key hashing
+
+Legacy agent API keys are hashed with **Argon2** before storage. The gateway never persists plaintext keys.
 
 ### Scoped Sub-Account Keys
 
@@ -37,13 +57,11 @@ Each sub-account is provisioned with Bybit API keys that are scoped to that sub-
 
 ### Gateway as Proxy
 
-The gateway acts as a secure proxy between the agent and Bybit:
-
-1. Agent sends an MCP tool call to the gateway.
-2. Gateway authenticates the agent via the Bearer token.
-3. Gateway translates the MCP tool call into the appropriate Bybit API request.
-4. Gateway signs the request with the agent's scoped sub-account API key.
-5. Gateway returns the Bybit response as an MCP tool result.
+1. Agent sends an MCP tool call (`execute_code`, `search_sdk`, …).
+2. Gateway authenticates the agent (OAuth JWT or legacy API key).
+3. For `execute_code`, the sandbox invokes typed `eterna.*` methods.
+4. Gateway signs Bybit requests with the agent's scoped sub-account key.
+5. Gateway returns the result as an MCP tool response.
 
 The agent never sees or handles Bybit API keys directly.
 
@@ -51,7 +69,7 @@ The agent never sees or handles Bybit API keys directly.
 
 ## Transport Protocol
 
-The gateway uses **MCP Streamable HTTP** as its transport layer.
+The gateway uses **MCP Streamable HTTP**.
 
 ### Endpoints
 
@@ -78,21 +96,5 @@ All requests and responses use `application/json` content type following the MCP
 
 ## Market Support
 
-The gateway currently supports:
-
-| Property | Value |
-|---|---|
-| **Market type** | Linear (USDT-settled) perpetual futures |
-| **Settlement currency** | USDT |
-| **Margin mode** | Cross margin |
-| **Position mode** | One-way (net position) |
-
-### What This Means
-
-- **Linear perpetual futures** -- contracts settled in USDT, not the underlying asset. PnL is always in USDT.
-- **Cross margin** -- all available USDT balance is shared across positions as margin. This provides more flexibility but means a large loss on one position can affect margin available for others.
-- **One-way position mode** -- each symbol has a single net position. Buying while short reduces the short; you cannot hold simultaneous long and short positions on the same symbol.
-
-### Available Instruments
-
-All USDT-settled perpetual futures listed on Bybit are available. Use the `get_instruments` tool to retrieve the current list with contract specifications.
+- **USDT-margined perpetual futures** (200+ pairs)
+- Spot trading is on the roadmap (see [ROADMAP.md](../ROADMAP.md))

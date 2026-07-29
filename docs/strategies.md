@@ -2,6 +2,10 @@
 
 Reference strategies for AI agents using the Eterna MCP Gateway.
 
+> **API note:** Call these through `execute_code` using the `eterna.*` SDK
+> (`eterna.getTickers`, `eterna.placeOrder`, …). Do not call retired MCP tool
+> names like `get_tickers` / `place_order`. See [tools-reference.md](tools-reference.md).
+
 ---
 
 ## Momentum Scalping Strategy
@@ -10,11 +14,11 @@ A short-term strategy that identifies instruments with strong recent momentum an
 
 ### Entry Signals
 
-1. **Scan for momentum** using `get_tickers`:
+1. **Scan for momentum** using `eterna.getTickers()`:
    - **Long signal**: `price24hPcnt` > +0.3% (positive 24h price change)
    - **Short signal**: `price24hPcnt` < -0.3% (negative 24h price change)
 
-2. **Confirm with orderbook** using `get_orderbook`:
+2. **Confirm with orderbook** using `eterna.getOrderbook(symbol, 50)`:
    - **Long confirmation**: total bid volume >= 1.1x total ask volume (buyers dominating)
    - **Short confirmation**: total ask volume >= 1.1x total bid volume (sellers dominating)
 
@@ -28,7 +32,7 @@ A short-term strategy that identifies instruments with strong recent momentum an
 | **Stop Loss** | 0.6% from entry price |
 | **Reward:Risk Ratio** | 1.67:1 |
 
-Set `takeProfit` and `stopLoss` parameters when calling `place_order`. Let the exchange handle exits automatically.
+Set `takeProfit` and `stopLoss` when calling `eterna.placeOrder`. Let the exchange handle exits automatically.
 
 ### Position Limits
 
@@ -40,11 +44,11 @@ Set `takeProfit` and `stopLoss` parameters when calling `place_order`. Let the e
 
 ### Workflow Cycle
 
-1. Check current positions with `get_positions`.
+1. Check current positions with `eterna.getPositions`.
 2. If fewer than target positions are open, scan for new opportunities.
-3. Call `get_tickers` to find momentum candidates.
-4. For each candidate, call `get_orderbook` to confirm direction.
-5. If confirmed and not already in that symbol, call `place_order` with TP/SL.
+3. Call `eterna.getTickers` to find momentum candidates.
+4. For each candidate, call `eterna.getOrderbook` to confirm direction.
+5. If confirmed and not already in that symbol, call `eterna.placeOrder` with TP/SL.
 6. Wait and repeat the cycle.
 7. Closed positions (hit TP or SL) free up slots for new trades.
 
@@ -98,10 +102,10 @@ This is well within the 5% maximum risk per trade.
 
 ### Sizing Workflow
 
-1. Call `get_balance` to read current equity.
-2. Call `get_positions` to count open positions.
+1. Call `eterna.getBalance` to read current equity.
+2. Call `eterna.getPositions` to count open positions.
 3. If open positions < 4, calculate: `target_notional = equity / 4`.
-4. Look up the instrument's `lotSize` with `get_instruments` to round the quantity correctly.
+4. Look up the instrument's `lotSize` with `eterna.getInstruments` to round the quantity correctly.
 5. Place the order with the calculated quantity.
 
 ---
@@ -114,11 +118,11 @@ Before trading, funds must be deposited and transferred to the trading wallet.
 
 Use **USDT on Arbitrum** for the lowest fees and fastest confirmation:
 
-1. Call `get_deposit_address` with `coin: "USDT"` and `chainType: "ARBI"`.
+1. Call `eterna.getDepositAddress("USDT", "ARBI")`.
 2. Send USDT to the returned address from your external wallet.
-3. Call `get_deposit_records` to monitor deposit status until it shows `"Success"`.
-4. Call `transfer_to_trading` with `coin: "USDT"` and the deposited amount.
-5. Call `get_balance` to confirm the trading balance is updated.
+3. Call `eterna.getDepositRecords("USDT")` to monitor deposit status until success.
+4. Call `eterna.transferToTrading("USDT", amount)`.
+5. Call `eterna.getBalance()` to confirm the trading balance is updated.
 
 ### Minimum Balance
 

@@ -1,119 +1,145 @@
-# Quick Start -- Trading in 5 Minutes
+# Quick Start — Trading in Minutes
 
-This guide gets you from zero to placing your first trade with an AI agent.
+This guide gets you from zero to a live MCP session with an AI agent that can trade via Eterna.
 
 ## Prerequisites
 
-- An MCP-compatible client: [claude.ai](https://claude.ai), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.sh), [Claude Desktop](https://claude.ai/download), or any client supporting Streamable HTTP
-- USDT for trading (you'll deposit after setup)
+- An MCP-compatible client: [claude.ai](https://claude.ai), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.sh), [Claude Desktop](https://claude.ai/download), Openclaw, or any client supporting **Streamable HTTP**
+- USDT for trading (deposit after setup)
 
-## Step 1: Connect (30 seconds)
+## Important: current model
 
-Add the Eterna MCP Gateway to your client. Pick your platform:
+Eterna MCP exposes **3 tools**:
 
-**claude.ai** -- add as a custom connector:
+1. `search_sdk` — discover `eterna.*` methods
+2. `execute_code` — run TypeScript in a Deno sandbox with the full SDK
+3. `search_examples` — find example snippets
+
+There is **no** `register_agent` tool and **no** per-endpoint tools like `get_tickers` / `place_order` at the MCP layer. Those are **SDK methods** inside `execute_code` (`eterna.getTickers`, `eterna.placeOrder`, …).
+
+Auth is **OAuth-first**. The gateway auto-provisions an isolated sub-account on first successful sign-in.
+
+---
+
+## Claude (claude.ai)
 
 1. Copy the MCP URL: `https://mcp.eterna.exchange/mcp`
 2. Go to [claude.ai/customize/connectors](https://claude.ai/customize/connectors)
 3. Click **+** then **Add custom connector**
 4. Name it **Eterna**, paste the MCP URL
 5. Click **Connect**
-6. Click **Sign in with Google**
-7. Click **Approve**
+6. Complete the **OAuth sign-in** and click **Approve**
 
-**Claude Code** -- create `.mcp.json` in your project root:
+Ask Claude:
 
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp"
-    }
-  }
-}
-```
-
-**Cursor** -- create `.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp"
-    }
-  }
-}
-```
-
-Restart your client to pick up the new server (not needed for claude.ai).
-
-## Step 2: Register (30 seconds)
-
-Ask your AI agent:
-
-> "Register a new trading agent called my-first-bot"
-
-The agent calls `register_agent` and receives an API key like `eterna_mcp_a1b2c3d4e5f6...`.
-
-**Save this key immediately** -- it is shown only once.
-
-## Step 3: Authenticate (30 seconds)
-
-**claude.ai** -- authentication is handled automatically via the OAuth sign-in during connector setup. No extra config needed.
-
-**Claude Code / Cursor** -- update your config to include the API key:
-
-```json
-{
-  "mcpServers": {
-    "eterna-trading": {
-      "type": "streamable-http",
-      "url": "https://mcp.eterna.exchange/mcp",
-      "headers": {
-        "Authorization": "Bearer eterna_mcp_a1b2c3d4e5f6..."
-      }
-    }
-  }
-}
-```
-
-Restart your client again.
-
-## Step 4: Deposit (2-3 minutes)
-
-Ask your agent:
-
-> "Get my deposit address for USDT on the Arbitrum One network"
-
-The agent calls `get_deposit_address` and returns your unique deposit address. Send USDT to this address.
-
-Once the deposit confirms, ask:
-
-> "Transfer my USDT from the funding wallet to the trading wallet"
-
-The agent calls `transfer_to_trading` to move funds into your trading account.
-
-## Step 5: Trade
-
-Ask your agent:
-
-> "What's the current price of BTC?"
-
-> "Show me the ETH order book"
-
-> "Buy 0.001 BTC at market price with 2x leverage"
-
-> "Set a stop loss at $95,000 on my BTC position"
-
-> "Close my BTC position"
+> Use search_sdk to find balance and ticker methods, then execute_code to show my equity and the BTCUSDT last price.
 
 ---
 
-## What's Next?
+## Claude Code
 
-- **[Strategies](docs/strategies.md)** -- Momentum scalping and position sizing workflows
-- **[Tools Reference](docs/tools-reference.md)** -- Full parameter docs for all 12 tools
-- **[Examples](examples/)** -- LangChain, AutoGen, CrewAI, and raw Python integrations
-- **[Skills](skills/)** -- Give Claude Code domain-specific trading knowledge
+Create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "eterna": {
+      "type": "streamable-http",
+      "url": "https://mcp.eterna.exchange/mcp"
+    }
+  }
+}
+```
+
+Restart Claude Code if needed, complete OAuth when prompted, then use `search_sdk` + `execute_code`.
+
+---
+
+## Cursor
+
+Create `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "eterna": {
+      "type": "streamable-http",
+      "url": "https://mcp.eterna.exchange/mcp"
+    }
+  }
+}
+```
+
+Restart Cursor if needed, complete OAuth when prompted.
+
+---
+
+## Openclaw
+
+```bash
+openclaw plugins install @eterna-hybrid-exchange/openclaw-plugin
+npm install -g @eterna-hybrid-exchange/cli
+eterna login
+```
+
+Then start the `eterna_trading` skill / onboarding flow.
+
+Package: [@eterna-hybrid-exchange/openclaw-plugin](https://www.npmjs.com/package/@eterna-hybrid-exchange/openclaw-plugin)
+
+---
+
+## Deposit (after auth)
+
+Ask your agent (it should use `execute_code`):
+
+> Discover allowed USDT deposit chains, then give me a USDT deposit address on Arbitrum (`ARBI`).
+
+After the deposit confirms:
+
+> Transfer my USDT from the funding wallet to the trading wallet.
+
+Underlying SDK calls:
+
+```typescript
+const coins = await eterna.getAllowedDepositCoins("USDT");
+const addr = await eterna.getDepositAddress("USDT", "ARBI");
+const transfer = await eterna.transferToTrading("USDT", "100");
+return { coins, addr, transfer };
+```
+
+---
+
+## Trade
+
+Suggested prompts:
+
+> What's the current BTCUSDT price and my available balance?
+
+> Set leverage to 2x on BTCUSDT, then buy 0.001 BTC at market with a stop loss.
+
+> Close my BTCUSDT position.
+
+Example `execute_code` body:
+
+```typescript
+await eterna.setLeverage("BTCUSDT", "2");
+const order = await eterna.placeOrder({
+  symbol: "BTCUSDT",
+  side: "Buy",
+  orderType: "Market",
+  qty: "0.001",
+  stopLoss: "95000",
+});
+return order;
+```
+
+Always call `search_sdk` first if you are unsure about parameters.
+
+---
+
+## What's next?
+
+- **[Tools Reference](docs/tools-reference.md)** — MCP tools + SDK categories
+- **[Authentication](docs/authentication.md)** — OAuth and legacy API keys
+- **[llms.txt](https://ai.eterna.exchange/llms.txt)** — Machine-readable product facts
+- **[Video tutorials](https://ai.eterna.exchange/#videos)** — Official walkthroughs

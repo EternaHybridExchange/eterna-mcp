@@ -16,7 +16,7 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer token from OAuth (ai-auth) or agent API key after register_agent. See https://github.com/EternaHybridExchange/eterna-mcp/blob/main/docs/authentication.md",
+          "description": "Bearer access token from OAuth (ai-auth, scope mcp:full) or a legacy agent API key. See https://github.com/EternaHybridExchange/eterna-mcp/blob/main/docs/authentication.md",
           "isRequired": true,
           "isSecret": true
         }
