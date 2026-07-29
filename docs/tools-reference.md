@@ -1,389 +1,174 @@
 # Tools Reference
 
-Complete documentation for all 12 tools exposed by the Eterna MCP Gateway.
+Eterna MCP Gateway tool and SDK documentation.
 
-**Gateway URL:** `https://mcp.eterna.exchange/mcp`
-
----
-
-## Registration
-
-### `register_agent`
-
-Create a new agent account and receive an API key. This is the only tool available without authentication.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `name` | string | Yes | Display name for the agent |
-
-**Returns:**
-
-```json
-{
-  "agentId": "ag_abc123",
-  "apiKey": "eterna_mcp_a1b2c3d4e5f6...",
-  "message": "Agent registered successfully. Save your API key -- it will not be shown again."
-}
-```
-
-**Notes:**
-- The API key is only returned once at registration. Store it securely.
-- See [authentication.md](authentication.md) for key format and usage.
+**Gateway URL:** `https://mcp.eterna.exchange/mcp`  
+**Transport:** Streamable HTTP  
+**Auth:** OAuth (`mcp:full`) preferred; legacy Bearer API keys supported
 
 ---
 
-## Market Data
+## Architecture note
 
-### `get_tickers`
+Older docs described **12 MCP tools** (`register_agent`, `get_tickers`, `place_order`, …). That model is **retired**.
 
-Retrieve current price, 24-hour change, volume, and funding rate for perpetual futures instruments.
+Current model:
 
-**Parameters:**
+| Layer | What exists |
+|---|---|
+| MCP tools | `execute_code`, `search_sdk`, `search_examples` |
+| Trading API surface | 29 `eterna.*` SDK methods **inside** `execute_code` |
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | No | Trading pair symbol (e.g. `"BTCUSDT"`). Omit to get all tickers. |
-
-**Returns:**
-
-Array of ticker objects:
-
-```json
-[
-  {
-    "symbol": "BTCUSDT",
-    "lastPrice": "67234.50",
-    "price24hPcnt": "0.0215",
-    "highPrice24h": "67800.00",
-    "lowPrice24h": "65100.00",
-    "volume24h": "12345.678",
-    "turnover24h": "823456789.12",
-    "fundingRate": "0.0001",
-    "nextFundingTime": "1700000000000"
-  }
-]
-```
+If an agent still tries to call `register_agent` or `get_tickers` as MCP tools, it is following outdated documentation.
 
 ---
 
-### `get_instruments`
+## MCP tools
 
-Retrieve contract specifications including tick size, lot size, and leverage limits.
+### `search_sdk`
 
-**Parameters:**
+Search the SDK documentation before writing code.
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | No | Trading pair symbol (e.g. `"BTCUSDT"`). Omit to get all instruments. |
+Typical detail levels: `list`, `summary`, `full`, `params`, `keywords` (exact parameter names depend on the live tool schema — ask the client to introspect tools).
 
-**Returns:**
-
-Array of instrument objects:
-
-```json
-[
-  {
-    "symbol": "BTCUSDT",
-    "baseCoin": "BTC",
-    "quoteCoin": "USDT",
-    "status": "Trading",
-    "tickSize": "0.10",
-    "lotSize": "0.001",
-    "minLeverage": "1",
-    "maxLeverage": "100",
-    "minOrderQty": "0.001",
-    "maxOrderQty": "100.000"
-  }
-]
-```
+**When to use:** every time the agent is unsure which method exists or what arguments it takes.
 
 ---
 
-### `get_orderbook`
+### `execute_code`
 
-Retrieve the live order book for a given symbol.
+Run TypeScript in a sandboxed Deno runtime with the `eterna.*` SDK injected.
 
-**Parameters:**
+**Code rules:**
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | Yes | Trading pair symbol (e.g. `"BTCUSDT"`) |
-| `limit` | number | No | Number of price levels per side. Range: 1-200. Default: 25. |
+- Code is an async function body
+- Use `await` for all SDK calls
+- Use `return <value>` for the result (JSON-serialized)
+- Use `console.log()` for intermediate output
+- Most numeric exchange fields arrive as **strings** — use `parseFloat()` for arithmetic
+- Technical analysis helpers (`getRsi`, `getMacd`, …) return **numbers**
 
-**Returns:**
+**Minimal example:**
 
-```json
-{
-  "symbol": "BTCUSDT",
-  "bids": [
-    ["67230.00", "1.234"],
-    ["67229.90", "0.567"]
-  ],
-  "asks": [
-    ["67230.10", "0.890"],
-    ["67230.20", "2.345"]
-  ],
-  "timestamp": 1700000000000
-}
+```typescript
+const balance = await eterna.getBalance();
+const ticker = await eterna.getTickers("BTCUSDT");
+return {
+  equity: balance.totalEquity,
+  available: balance.totalAvailableBalance,
+  last: ticker[0]?.lastPrice,
+};
 ```
 
-Each entry is a `[price, quantity]` pair. Bids are sorted descending, asks ascending.
+**Deposit + transfer example:**
+
+```typescript
+const addr = await eterna.getDepositAddress("USDT", "ARBI");
+// …user sends USDT …
+const records = await eterna.getDepositRecords("USDT");
+const transfer = await eterna.transferToTrading("USDT", "100");
+return { addr, records, transfer };
+```
+
+**Trade example:**
+
+```typescript
+await eterna.setLeverage("BTCUSDT", "2");
+const order = await eterna.placeOrder({
+  symbol: "BTCUSDT",
+  side: "Buy",
+  orderType: "Market",
+  qty: "0.001",
+  takeProfit: "120000",
+  stopLoss: "95000",
+});
+return order;
+```
+
+For full parameter schemas, call `search_sdk` with detail `full` / `params`, or read the `sdk_reference` prompt / `eterna://docs/sdk` resource.
 
 ---
 
-## Account & Positions
+### `search_examples`
 
-### `get_balance`
-
-Retrieve USDT balance, equity, and margin details for the trading account.
-
-**Parameters:**
-
-None.
-
-**Returns:**
-
-```json
-{
-  "totalEquity": "10234.56",
-  "totalMarginBalance": "10234.56",
-  "totalAvailableBalance": "8500.00",
-  "coin": [
-    {
-      "coin": "USDT",
-      "equity": "10234.56",
-      "walletBalance": "10000.00",
-      "availableToWithdraw": "8500.00",
-      "unrealisedPnl": "234.56",
-      "cumRealisedPnl": "1500.00"
-    }
-  ]
-}
-```
+Semantic search over curated `execute_code` snippets (deposit flow, indicators, order placement, etc.).
 
 ---
 
-### `get_positions`
+## SDK methods (via `execute_code`)
 
-Retrieve all open positions or filter by symbol.
+### Market data
 
-**Parameters:**
+| Method | Description |
+|---|---|
+| `eterna.getTickers(symbol?)` | Price, 24h change, volume, funding. Omit symbol for all pairs. |
+| `eterna.getOrderbook(symbol, limit?)` | Live bids/asks (`limit` 1-200, default 25) |
+| `eterna.getInstruments(symbol?)` | Contract specs: tick size, lot size, leverage limits |
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | No | Trading pair symbol (e.g. `"BTCUSDT"`). Omit to get all positions. |
+### Technical analysis
 
-**Returns:**
+| Method | Description |
+|---|---|
+| `eterna.getRsi(symbol, interval, period?)` | RSI (0-100) |
+| `eterna.getMacd(symbol, interval, …)` | MACD line, signal, histogram |
+| `eterna.getEma(symbol, interval, period?)` | EMA |
+| `eterna.getSma(symbol, interval, period?)` | SMA |
+| `eterna.getBollingerBands(symbol, interval, …)` | Upper / middle / lower |
+| `eterna.getVwap(symbol, interval)` | VWAP |
 
-Array of position objects:
+### Trading
 
-```json
-[
-  {
-    "symbol": "BTCUSDT",
-    "side": "Buy",
-    "size": "0.100",
-    "entryPrice": "67000.00",
-    "markPrice": "67234.50",
-    "leverage": "5",
-    "unrealisedPnl": "23.45",
-    "cumRealisedPnl": "150.00",
-    "takeProfit": "68000.00",
-    "stopLoss": "66500.00",
-    "positionValue": "6723.45",
-    "liqPrice": "63800.00"
-  }
-]
-```
+| Method | Description |
+|---|---|
+| `eterna.placeOrder(params)` | Market/limit order with optional TP/SL |
+| `eterna.closePosition(symbol)` | Close entire position at market |
+| `eterna.cancelOrder(…)` | Cancel a single order |
+| `eterna.cancelAllOrders(symbol?)` | Cancel open orders |
+| `eterna.setLeverage(symbol, leverage)` | Set leverage |
+| `eterna.setTradingStop(…)` | Update TP/SL on an open position |
 
----
+### Account
 
-### `get_orders`
+| Method | Description |
+|---|---|
+| `eterna.getBalance()` | Equity, available margin, unrealised PnL |
+| `eterna.getAccountInfo()` | Account configuration / mode |
+| `eterna.getAllCoinsBalance()` | Multi-coin balances |
+| `eterna.getPositions(symbol?)` | Open positions |
+| `eterna.getOrders(symbol?)` | Active / recent orders |
 
-Retrieve active and recent orders.
+### Funding
 
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | No | Trading pair symbol (e.g. `"BTCUSDT"`). Omit to get all orders. |
-
-**Returns:**
-
-Array of order objects:
-
-```json
-[
-  {
-    "orderId": "1234567890",
-    "orderLinkId": "",
-    "symbol": "BTCUSDT",
-    "side": "Buy",
-    "orderType": "Limit",
-    "price": "66500.00",
-    "qty": "0.100",
-    "cumExecQty": "0.000",
-    "orderStatus": "New",
-    "takeProfit": "68000.00",
-    "stopLoss": "66000.00",
-    "createdTime": "1700000000000",
-    "updatedTime": "1700000000000"
-  }
-]
-```
+| Method | Description |
+|---|---|
+| `eterna.getAllowedDepositCoins(coin?)` | Supported coins/chains and mins |
+| `eterna.getDepositAddress(coin, chainType)` | Deposit address (+ tag if needed) |
+| `eterna.getDepositRecords(coin?)` | Deposit history |
+| `eterna.transferToTrading(coin, amount)` | Funding wallet → trading wallet |
+| `eterna.swapToUsdt(…)` | Swap balances to USDT |
+| `eterna.getCoinInfo(…)` | Coin metadata |
+| `eterna.getWithdrawableAmount(…)` | Withdrawable amounts |
+| `eterna.submitWithdrawal(…)` | Submit a withdrawal |
+| `eterna.getWithdrawalStatus(…)` | Withdrawal status |
 
 ---
 
-## Trading
+## Errors and rate limits
 
-### `place_order`
+`execute_code` responses include an error category and hint when something fails. Prefer the live `error_handling` prompt and `eterna://docs/errors` resource over hard-coding recovery logic.
 
-Place a market or limit order on a perpetual futures instrument.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | Yes | Trading pair symbol (e.g. `"BTCUSDT"`) |
-| `side` | string | Yes | Order side: `"Buy"` or `"Sell"` |
-| `orderType` | string | Yes | Order type: `"Market"` or `"Limit"` |
-| `qty` | string | Yes | Order quantity in base currency (e.g. `"0.001"`) |
-| `price` | string | No | Limit price. Required for Limit orders, ignored for Market. |
-| `leverage` | string | No | Leverage multiplier (e.g. `"5"`). Sets leverage before placing the order. |
-| `takeProfit` | string | No | Take-profit price |
-| `stopLoss` | string | No | Stop-loss price |
-| `reduceOnly` | boolean | No | If `true`, the order can only reduce an existing position |
-
-**Returns:**
-
-```json
-{
-  "orderId": "1234567890",
-  "orderLinkId": "eterna_abc123",
-  "fillPrice": "67234.50"
-}
-```
-
-**Notes:**
-- Market orders execute immediately at current market price.
-- Limit orders are placed on the order book and execute when price reaches the specified level.
-- Always set `takeProfit` and `stopLoss` for risk management.
+Common categories include validation errors, insufficient balance, exchange rejections, and infrastructure / timeout failures. Do **not** blindly retry infrastructure errors with new generated code.
 
 ---
 
-### `close_position`
+## Deprecated MCP tool names
 
-Close an entire open position at market price.
+Do **not** document or call these as MCP tools anymore:
 
-**Parameters:**
+- `register_agent`
+- `get_tickers`, `get_instruments`, `get_orderbook`
+- `get_balance`, `get_positions`, `get_orders`
+- `place_order`, `close_position`
+- `get_deposit_address`, `get_deposit_records`, `transfer_to_trading`
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | string | Yes | Trading pair symbol of the position to close (e.g. `"BTCUSDT"`) |
-
-**Returns:**
-
-```json
-{
-  "orderId": "1234567891",
-  "symbol": "BTCUSDT",
-  "closedSize": "0.100",
-  "positionSide": "Buy",
-  "entryPrice": "67000.00",
-  "exitPrice": "67234.50",
-  "pnl": "23.45"
-}
-```
-
----
-
-## Funding
-
-### `get_deposit_address`
-
-Get a deposit address for a specific coin and blockchain network.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `coin` | string | Yes | Coin to deposit (e.g. `"USDT"`, `"ETH"`) |
-| `chainType` | string | Yes | Blockchain network: `"ETH"`, `"ARBI"`, `"SOL"`, etc. |
-
-**Returns:**
-
-```json
-{
-  "coin": "USDT",
-  "chain": "ARBI",
-  "address": "0xabc123...",
-  "tag": ""
-}
-```
-
-**Notes:**
-- Arbitrum (`"ARBI"`) is recommended for USDT deposits due to low fees and fast confirmation.
-- The `tag` field is empty for most chains but required for some (e.g. XRP).
-
----
-
-### `get_deposit_records`
-
-Retrieve deposit history for the account.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `coin` | string | No | Filter by coin (e.g. `"USDT"`). Omit to get all deposits. |
-
-**Returns:**
-
-```json
-{
-  "depositCount": 3,
-  "deposits": [
-    {
-      "coin": "USDT",
-      "chain": "ARBI",
-      "amount": "1000.00",
-      "status": "Success",
-      "txID": "0xdef456...",
-      "toAddress": "0xabc123...",
-      "successAt": "1700000000000"
-    }
-  ]
-}
-```
-
----
-
-### `transfer_to_trading`
-
-Move funds from the Funding wallet to the Trading (Unified) wallet. Deposits arrive in the Funding wallet and must be transferred before trading.
-
-**Parameters:**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `coin` | string | Yes | Coin to transfer (e.g. `"USDT"`) |
-| `amount` | string | Yes | Amount to transfer (e.g. `"500.00"`) |
-
-**Returns:**
-
-```json
-{
-  "status": "SUCCESS",
-  "transferId": "tf_abc123",
-  "coin": "USDT",
-  "amount": "500.00",
-  "from": "FUND",
-  "to": "UNIFIED"
-}
-```
-
-**Notes:**
-- Transfers between wallets are instant and free.
-- Use `get_balance` after transferring to confirm the updated trading balance.
+Use the camelCase `eterna.*` SDK equivalents inside `execute_code` instead.
