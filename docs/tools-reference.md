@@ -17,9 +17,26 @@ Current model:
 | Layer | What exists |
 |---|---|
 | MCP tools | `execute_code`, `search_sdk`, `search_examples` |
-| Trading API surface | 29 `eterna.*` SDK methods **inside** `execute_code` |
+| Trading API surface | 30 `eterna.*` SDK methods **inside** `execute_code` |
 
 If an agent still tries to call `register_agent` or `get_tickers` as MCP tools, it is following outdated documentation.
+
+---
+
+## Markets (linear vs spot)
+
+| Market | Meaning | How to select |
+|---|---|---|
+| **linear** (default) | USDT-margined perpetual futures | Omit `market` or pass `market: "linear"` |
+| **spot** | USDT spot pairs | Pass `market: "spot"` on supported methods |
+
+**Methods with optional `market`:** `getTickers`, `getOrderbook`, `getInstruments`, `getOrders`, `placeOrder`, `cancelOrder`, `cancelAllOrders`.
+
+**Linear-only (perps):** `closePosition`, `setLeverage`, `setTradingStop`, `getPositions`.
+
+**Spot-only helper:** `sellSpotBalance(symbol)` sells the available base coin for USDT at market (exit a spot holding; qty rounded to lot size).
+
+Spot market orders via `placeOrder` may use `marketUnit: "baseCoin" | "quoteCoin"` for quantity semantics.
 
 ---
 
@@ -85,6 +102,26 @@ const order = await eterna.placeOrder({
 return order;
 ```
 
+**Spot market buy example:**
+
+```typescript
+const order = await eterna.placeOrder({
+  symbol: "BTCUSDT",
+  side: "Buy",
+  orderType: "Market",
+  qty: "50",
+  market: "spot",
+  marketUnit: "quoteCoin",
+});
+return order;
+```
+
+**Exit spot holding:**
+
+```typescript
+return await eterna.sellSpotBalance("BTCUSDT");
+```
+
 For full parameter schemas, call `search_sdk` with detail `full` / `params`, or read the `sdk_reference` prompt / `eterna://docs/sdk` resource.
 
 ---
@@ -101,9 +138,9 @@ Semantic search over curated `execute_code` snippets (deposit flow, indicators, 
 
 | Method | Description |
 |---|---|
-| `eterna.getTickers(symbol?)` | Price, 24h change, volume, funding. Omit symbol for all pairs. |
-| `eterna.getOrderbook(symbol, limit?)` | Live bids/asks (`limit` 1-200, default 25) |
-| `eterna.getInstruments(symbol?)` | Contract specs: tick size, lot size, leverage limits |
+| `eterna.getTickers(symbol?, market?)` | Price, 24h change, volume, funding (linear). Omit symbol to list pairs for the market (default linear). |
+| `eterna.getOrderbook(symbol, limit?, market?)` | Live bids/asks (`limit` 1-200, default 25) |
+| `eterna.getInstruments(symbol?, market?)` | Contract or spot specs: tick size, lot size, leverage limits (linear) |
 
 ### Technical analysis
 
@@ -120,12 +157,13 @@ Semantic search over curated `execute_code` snippets (deposit flow, indicators, 
 
 | Method | Description |
 |---|---|
-| `eterna.placeOrder(params)` | Market/limit order with optional TP/SL |
-| `eterna.closePosition(symbol)` | Close entire position at market |
-| `eterna.cancelOrder(…)` | Cancel a single order |
-| `eterna.cancelAllOrders(symbol?)` | Cancel open orders |
-| `eterna.setLeverage(symbol, leverage)` | Set leverage |
-| `eterna.setTradingStop(…)` | Update TP/SL on an open position |
+| `eterna.placeOrder(params)` | Market/limit order. Default `market: "linear"` (perp). Use `market: "spot"` for spot; optional TP/SL on linear. |
+| `eterna.sellSpotBalance(symbol)` | Sell available base coin for USDT on a spot pair at market |
+| `eterna.closePosition(symbol)` | Close entire **linear** position at market |
+| `eterna.cancelOrder(…, market?)` | Cancel a single order (linear or spot) |
+| `eterna.cancelAllOrders(symbol?, market?)` | Cancel open orders |
+| `eterna.setLeverage(symbol, leverage)` | Set leverage (**linear** only) |
+| `eterna.setTradingStop(…)` | Update TP/SL on an open **linear** position |
 
 ### Account
 
@@ -135,7 +173,7 @@ Semantic search over curated `execute_code` snippets (deposit flow, indicators, 
 | `eterna.getAccountInfo()` | Account configuration / mode |
 | `eterna.getAllCoinsBalance()` | Multi-coin balances |
 | `eterna.getPositions(symbol?)` | Open positions |
-| `eterna.getOrders(symbol?)` | Active / recent orders |
+| `eterna.getOrders(symbol?, market?)` | Active / recent orders (linear or spot) |
 
 ### Funding
 

@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Streamable_HTTP-green.svg)](https://modelcontextprotocol.io)
 [![Tools](https://img.shields.io/badge/Tools-3-orange.svg)](#mcp-tools)
-[![SDK](https://img.shields.io/badge/SDK_methods-29-blue.svg)](#sdk-methods-via-execute_code)
+[![SDK](https://img.shields.io/badge/SDK_methods-30-blue.svg)](#sdk-methods-via-execute_code)
 
 ---
 
@@ -80,13 +80,13 @@ Full parameter docs: [docs/tools-reference.md](docs/tools-reference.md)
 
 ## SDK methods (via `execute_code`)
 
-29 methods on the `eterna` object inside the sandbox:
+30 methods on the `eterna` object inside the sandbox (linear perps default; USDT spot via `market: "spot"` and `sellSpotBalance`):
 
 | Category | Methods |
 |---|---|
-| **Market data** | `getTickers`, `getOrderbook`, `getInstruments` |
+| **Market data** | `getTickers`, `getOrderbook`, `getInstruments` (optional `market`: linear or spot) |
 | **Technical analysis** | `getRsi`, `getMacd`, `getEma`, `getSma`, `getBollingerBands`, `getVwap` |
-| **Trading** | `placeOrder`, `closePosition`, `cancelOrder`, `cancelAllOrders`, `setLeverage`, `setTradingStop` |
+| **Trading** | `placeOrder`, `sellSpotBalance`, `closePosition`, `cancelOrder`, `cancelAllOrders`, `setLeverage`, `setTradingStop` |
 | **Account** | `getBalance`, `getAccountInfo`, `getAllCoinsBalance`, `getPositions`, `getOrders` |
 | **Funding** | `getDepositAddress`, `getDepositRecords`, `getAllowedDepositCoins`, `transferToTrading`, `swapToUsdt`, `getCoinInfo`, `getWithdrawableAmount`, `submitWithdrawal`, `getWithdrawalStatus` |
 
@@ -158,8 +158,10 @@ Details: [docs/authentication.md](docs/authentication.md)
 
 ## Markets
 
-- **USDT-margined perpetual futures** (200+ pairs)
-- Spot trading is on the roadmap
+- **USDT-margined perpetual futures** (200+ pairs, default `market: "linear"`)
+- **USDT spot** via `placeOrder({ …, market: "spot" })`, `sellSpotBalance(symbol)`, and spot-aware market data / order methods
+
+See [docs/tools-reference.md](docs/tools-reference.md#markets-linear-vs-spot).
 
 ---
 
@@ -167,9 +169,9 @@ Details: [docs/authentication.md](docs/authentication.md)
 
 See [ROADMAP.md](ROADMAP.md).
 
-**Shipped:** code execution sandbox, OAuth agent provisioning, 29 SDK methods, technical analysis, funding/withdrawal flows.
+**Shipped:** code execution sandbox, OAuth agent provisioning, 30 SDK methods (perps + USDT spot), technical analysis, funding/withdrawal flows.
 
-**Next:** broader SDK coverage, cron strategy runtime, backtesting, spot.
+**Next:** broader SDK coverage, cron strategy runtime, backtesting.
 
 ---
 
