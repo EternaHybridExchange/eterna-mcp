@@ -5,6 +5,7 @@ on:
     branches: [main, feat/workshop]
     paths:
       - 'skills/claude-ai/**'
+      - '.github/workflows/build-skills.yml'
   workflow_dispatch:
 
 permissions:
